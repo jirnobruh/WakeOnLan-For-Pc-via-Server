@@ -1,6 +1,6 @@
 import socket
 import threading
-import datetime
+from _datetime import datetime
 
 # Configuration
 ServerHost = "0.0.0.0"
