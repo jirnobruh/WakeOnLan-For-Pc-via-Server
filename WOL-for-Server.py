@@ -1,71 +1,139 @@
 import socket
 import threading
-from _datetime import datetime
 
-# Configuration
-ServerHost = "0.0.0.0"
-ServerPort = 9999
-MacAdressPC = ''
+class WoLServer:
+    def __init__(self, host='0.0.0.0', port=9999):
+        self.host = host
+        self.port = port
 
-def send_wol(mac):
-    # Send Wale-On-Lan packet
-    try:
-        # Create magic packet
-        mac_bytes = bytearray.fromhex(mac.replace(':', '').replace('-', ''))
-        magic_packet = b'\xff' * 6 + mac_bytes * 16
+        self.target_mac = 'FF-FF-FF-FF-FF-FF'  # Gaming PC MAC address
 
-        # Sending a broadcast packet
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        # List of broadcast IPs for different networks
+        self.broadcast_ips = [
+            '192.168.0.15',  # Broadcast IP for local network (replace with yours)
+            '255.255.255.255'
+        ]
+
+    def create_magic_packet(self, mac):
+        """Creates magic packet for Wake-on-LAN"""
+        # Remove separators from MAC address
+        mac_clean = mac.replace(':', '').replace('-', '')
+
+        # Check MAC address length
+        if len(mac_clean) != 12:
+            raise ValueError(f"Invalid MAC address length: {mac}")
+
+        # Convert MAC to bytes
+        mac_bytes = bytes.fromhex(mac_clean)
+
+        # Create magic packet: 6xFF + 16*MAC
+        return b'\xff' * 6 + mac_bytes * 16
+
+    def wake_up_pc_specific_network(self):
+        """Отправляет WoL через локальную сеть 192.168.0.x"""
+        success = False
+
+        # Parameters for the local network
+        local_network_params = {
+            'broadcast_ip': '192.168.0.255',  # Широковещательный адрес для /24 сети
+            'source_interface_ip': '192.168.0.16'  # IP сервера в локальной сети
+        }
+
+        print(f"Attempting to send WoL via local network...")
+        print(f"Broadcast IP: {local_network_params['broadcast_ip']}")
+        print(f"Source interface IP: {local_network_params['source_interface_ip']}")
+
+        # Send via the local network
+        success = self.send_wol_via_interface(
+            local_network_params['broadcast_ip'],
+            local_network_params['source_interface_ip']
+        )
+
+        return success
+
+    def send_wol_via_interface(self, target_ip, interface_ip=None):
+        """Отправляет WoL-пакет через указанный интерфейс"""
+        try:
+            # Create socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            sock.sendto(magic_packet, ('255.255.255.255', 9))
 
-        print(f"[{datetime.now()}] WoL packet send to MAC: {mac}")
-        return True
-    except Exception as e:
-        print(e)
-        return False
+            # If the interface IP is specified, we bind the socket to it.
+            if interface_ip:
+                sock.bind((interface_ip, 0))
+                print(f"Socket bound to interface: {interface_ip}")
 
-def handle_client(client_socket, address):
-    # Processing client connections
-    try:
-        request = client_socket.recv(1024).decode('utf-8').strip()
+            # Create magic packet
+            magic_packet = self.create_magic_packet(self.target_mac)
 
-        if request == 'WAKE_PC':
-            print(f"[{datetime.now()}] Received a command from {address[0]}")
-            success = send_wol(MacAdressPC)
-            response = "SUCCESS" if success else "ERROR"
-        else:
-            response = "INVALID_COMMAND"
+            # Send it to the broadcast address
+            sock.sendto(magic_packet, (target_ip, 9))
+            print(f"✅ Magic packet sent to {self.target_mac} via broadcast {target_ip}")
+            if interface_ip:
+                print(f"   Using source interface: {interface_ip}")
 
-        client_socket.send(response.encode('utf-8'))
-    except Exception as e:
-        print(e)
-    finally:
-        client_socket.close()
+            sock.close()
+            return True
+
+        except Exception as e:
+            print(f"❌ Error sending WoL packet: {e}")
+            return False
+
+    def handle_client(self, conn, addr):
+        """Handles client connection"""
+        print(f"Connection from {addr}")
+
+        try:
+            data = conn.recv(1024).decode('utf-8').strip()
+
+            if data == 'WAKE_PC':
+                print("Wake command received")
+                if self.wake_up_pc_specific_network():
+                    conn.send("SUCCESS".encode('utf-8'))
+                else:
+                    conn.send("ERROR".encode('utf-8'))
+            else:
+                print(f"Unknown command: {data}")
+                conn.send("UNKNOWN_COMMAND".encode('utf-8'))
+
+        except Exception as e:
+            print(f"Error handling client {addr}: {e}")
+            conn.send("ERROR".encode('utf-8'))
+        finally:
+            conn.close()
+
+    def start_server(self):
+        """Starts the server"""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+            server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server_socket.bind((self.host, self.port))
+            server_socket.listen()
+
+            print(f"WoL Server listening on {self.host}:{self.port}")
+            print(f"Target MAC: {self.target_mac}")
+            print("Broadcast IPs:")
+            for ip in self.broadcast_ips:
+                print(f"  - {ip}")
+
+            while True:
+                conn, addr = server_socket.accept()
+                client_thread = threading.Thread(
+                    target=self.handle_client,
+                    args=(conn, addr)
+                )
+                client_thread.daemon = True
+                client_thread.start()
 
 def main():
-    # Start server
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind((ServerHost, ServerPort))
-    server.listen(5)
+    server = WoLServer()
 
-    print(f"[{datetime.now()}] WoL server start on port {ServerPort}")
-    print(f"[{datetime.now()}] Waiting for commands...")
+    try:
+        server.start_server()
+    except KeyboardInterrupt:
+        print("\nServer stopped by user")
+    except Exception as e:
+        print(f"Server error: {e}")
 
-    while True:
-        try:
-            client_socket, address = server.accept()
-            client_thread = threading.Thread(
-                target=handle_client,
-                args=(client_socket, address)
-            )
-            client_thread.daemon = True
-            client_thread.start()
-        except KeyboardInterrupt:
-            break
 
-    server.close()
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

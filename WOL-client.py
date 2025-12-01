@@ -24,7 +24,7 @@ class WoLClient:
 
 def main():
     # Replace it with your server's IP address (For example, on the RadminVPN network)
-    SERVER_IP = '26.0.0.1'  # Example: IP server in RadminVPN
+    SERVER_IP = '26.00.00.1'  # Example: IP server in RadminVPN
 
     client = WoLClient(SERVER_IP)
 
