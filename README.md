@@ -19,7 +19,7 @@ git clone https://github.com/jirnobruh/WakeOnLan-For-Pc-via-Server.git
    in server_config.py change TARGET_MAC, in BROADCAST_IPS local IP to computer you want to turn on and in LOCAL_NETWORK change to the server's IP address in local network
 3) On Client:
    in client_config.py change SERVER_IP and SERVER_PORT to the corresponding SERVER_HOST and SERVER_PORT specified in server_config.py
-4) Start WOL-for-server.py or start_server.bat in Server
-5) If you need to start the PC via Wake On Lan, then run on the client WOL-client.py or start_pc.bat
+4) Start WOL-for-server.py or start_server.bat (If you configure it inside the file) in Server
+5) If you need to start the PC via Wake On Lan, then run on the client WOL-client.py or start_pc.bat (If you configure it inside the file)
 ## How I use this
 I don't have a white IP address, and I use RadminVPN to make a local network between the client and the server. In theory, this should work smoothly on white IP addresses.
