@@ -1,18 +1,20 @@
 import socket
 import threading
+from server_config import (
+    SERVER_HOST,
+    SERVER_PORT,
+    TARGET_MAC,
+    BROADCAST_IPS,
+    LOCAL_NETWORK
+)
 
 class WoLServer:
-    def __init__(self, host='0.0.0.0', port=9999):
-        self.host = host
-        self.port = port
-
-        self.target_mac = 'FF-FF-FF-FF-FF-FF'  # Gaming PC MAC address
-
-        # List of broadcast IPs for different networks
-        self.broadcast_ips = [
-            '192.168.0.15',  # Broadcast IP for local network (replace with yours)
-            '255.255.255.255'
-        ]
+    def __init__(self):
+        self.host = SERVER_HOST
+        self.port = SERVER_PORT
+        self.target_mac = TARGET_MAC
+        self.broadcast_ips = BROADCAST_IPS
+        self.local_network = LOCAL_NETWORK
 
     def create_magic_packet(self, mac):
         """Creates magic packet for Wake-on-LAN"""
@@ -33,20 +35,14 @@ class WoLServer:
         """Sends WoL via local network 192.168.0.x"""
         success = False
 
-        # Parameters for the local network
-        local_network_params = {
-            'broadcast_ip': '192.168.0.255',  # Broadcast address for /24 network
-            'source_interface_ip': '192.168.0.16'  # Server IP in local network
-        }
-
         print(f"Attempting to send WoL via local network...")
-        print(f"Broadcast IP: {local_network_params['broadcast_ip']}")
-        print(f"Source interface IP: {local_network_params['source_interface_ip']}")
+        print(f"Broadcast IP: {self.local_network['broadcast_ip']}")
+        print(f"Source interface IP: {self.local_network['source_interface_ip']}")
 
         # Send via the local network
         success = self.send_wol_via_interface(
-            local_network_params['broadcast_ip'],
-            local_network_params['source_interface_ip']
+            self.local_network['broadcast_ip'],
+            self.local_network['source_interface_ip']
         )
 
         return success

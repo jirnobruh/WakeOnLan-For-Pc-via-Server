@@ -1,8 +1,9 @@
 import socket
 import sys
+from client_config import SERVER_IP, SERVER_PORT
 
 class WoLClient:
-    def __init__(self, server_ip, server_port=9999):
+    def __init__(self, server_ip, server_port):
         self.server_ip = server_ip
         self.server_port = server_port
 
@@ -23,10 +24,8 @@ class WoLClient:
 
 
 def main():
-    # Replace it with your server's IP address (For example, on the RadminVPN network)
-    SERVER_IP = '26.00.00.1'  # Example: IP server in RadminVPN
-
-    client = WoLClient(SERVER_IP)
+    # Use the parameters from the configuration file
+    client = WoLClient(SERVER_IP, SERVER_PORT)
 
     print("Sending a command to turn on the PC...")
     if client.send_wake_command():
