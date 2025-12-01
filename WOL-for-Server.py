@@ -30,13 +30,13 @@ class WoLServer:
         return b'\xff' * 6 + mac_bytes * 16
 
     def wake_up_pc_specific_network(self):
-        """Отправляет WoL через локальную сеть 192.168.0.x"""
+        """Sends WoL via local network 192.168.0.x"""
         success = False
 
         # Parameters for the local network
         local_network_params = {
-            'broadcast_ip': '192.168.0.255',  # Широковещательный адрес для /24 сети
-            'source_interface_ip': '192.168.0.16'  # IP сервера в локальной сети
+            'broadcast_ip': '192.168.0.255',  # Broadcast address for /24 network
+            'source_interface_ip': '192.168.0.16'  # Server IP in local network
         }
 
         print(f"Attempting to send WoL via local network...")
@@ -52,7 +52,7 @@ class WoLServer:
         return success
 
     def send_wol_via_interface(self, target_ip, interface_ip=None):
-        """Отправляет WoL-пакет через указанный интерфейс"""
+        """Sends WoL packet through specified interface"""
         try:
             # Create socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
